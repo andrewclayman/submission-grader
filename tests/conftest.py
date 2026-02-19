@@ -5,8 +5,6 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 import os
-# Clean up any old mock mode env var and set API key
-os.environ.pop("USE_MOCK_LLM", None)
 os.environ["OPENAI_API_KEY"] = "test-api-key"
 
 # Clear settings cache before importing app

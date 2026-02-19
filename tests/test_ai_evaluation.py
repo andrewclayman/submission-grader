@@ -14,8 +14,6 @@ import os
 from collections import Counter
 from unittest.mock import Mock, patch
 
-# Clean up any old mock mode env var and set API key
-os.environ.pop("USE_MOCK_LLM", None)
 os.environ["OPENAI_API_KEY"] = "test-api-key"
 
 # Clear settings cache before importing app
