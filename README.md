@@ -252,12 +252,3 @@ curl -X POST http://localhost:8000/grade \
 2. **Rate Limiting**: No built-in rate limiting (recommend adding for production).
 3. **Authentication**: No authentication layer (recommend adding for production).
 4. **Persistence**: Stateless design - no storage of submissions or grades.
-
-### Future Improvements
-
-Given more time, I would add:
-- Authentication and rate limiting
-- Caching for repeated submissions
-- Support for additional LLM providers (Anthropic, local models via Ollama)
-- Batch grading endpoint
-- Async processing for large submissions
