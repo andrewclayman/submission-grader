@@ -1,12 +1,13 @@
 """FastAPI application for the Submission Grader API."""
 
+import openai
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .models import GradeRequest, GradeResponse
 from .parser import parse_submission
-from .grader import grade_submission
+from .grader import grade_submission, GradingError
 
 settings = get_settings()
 
@@ -22,7 +23,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -74,37 +75,39 @@ async def grade(request: GradeRequest) -> GradeResponse:
 
         return result
 
+    except GradingError as e:
+        # The model kept returning invalid/incomplete output after retries
+        raise HTTPException(
+            status_code=502,
+            detail="Received invalid response from grading service. Please try again.",
+        ) from e
     except ValueError as e:
         # Configuration errors (e.g., missing API key)
         raise HTTPException(
             status_code=503,
             detail=f"Service configuration error: {str(e)}",
         )
+    except openai.AuthenticationError:
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication error with grading service. Please contact support.",
+        )
+    except openai.RateLimitError:
+        raise HTTPException(
+            status_code=429,
+            detail="Service is temporarily busy. Please try again in a few moments.",
+        )
+    except openai.APITimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Grading request timed out. Please try again.",
+        )
+    except openai.APIConnectionError:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach the grading service. Please try again.",
+        )
     except Exception as e:
-        error_message = str(e).lower()
-
-        # Provide specific messages for common OpenAI errors
-        if "api key" in error_message or "authentication" in error_message:
-            raise HTTPException(
-                status_code=503,
-                detail="Authentication error with grading service. Please contact support.",
-            )
-        elif "rate limit" in error_message:
-            raise HTTPException(
-                status_code=429,
-                detail="Service is temporarily busy. Please try again in a few moments.",
-            )
-        elif "timeout" in error_message:
-            raise HTTPException(
-                status_code=504,
-                detail="Grading request timed out. Please try again.",
-            )
-        elif "json" in error_message or "parse" in error_message:
-            raise HTTPException(
-                status_code=502,
-                detail="Received invalid response from grading service. Please try again.",
-            )
-
         # For other errors, provide debug details if enabled
         if settings.debug:
             raise HTTPException(status_code=500, detail=str(e))

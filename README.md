@@ -36,6 +36,14 @@ src/app/
 
 5. **Containerized Deployment**: Docker support for consistent, reproducible deployments.
 
+### Reliability and Safety Hardening
+
+- **Validated LLM output**: the model's JSON is parsed into a Pydantic schema (`LLMGrading`) and checked for completeness (every rubric criterion must be graded). On failure, the validation error is fed back to the model for a corrected answer (up to `LLM_MAX_ATTEMPTS`, default 3), then the API returns 502. No more silent default grades.
+- **Prompt-injection resistance**: the submission is fenced in `<submission>` tags, the system prompt declares it untrusted data, and a submission cannot close the fence.
+- **Runtime evidence check**: quoted passages in each criterion's evidence are verified against the submission text; `evidence_grounded` is `false` when a quote can't be found (possible hallucination), `null` when nothing was quoted.
+- **Target-consistent overall grade**: the overall grade is derived from each criterion's `meets_target` (all targets met -> `meets_expectations`, or `exceeds_expectations` if all exceed; any missed target -> `needs_improvement`; any unaddressed criterion -> `not_met` as a hard floor), so it can't contradict the per-criterion flags.
+- **Typed error mapping**: OpenAI exceptions map to 429/502/503/504 instead of matching on error-message strings. The client has an explicit timeout and built-in transport retries.
+
 ### How Structure Informs Analysis
 
 The parser identifies:
@@ -105,7 +113,7 @@ pytest tests/ -v --cov=src --cov-report=term-missing
 
 ## Test Coverage
 
-The test suite includes **57 tests** across four categories:
+The test suite includes **80 tests** across five categories:
 
 | Test File | Tests | Description |
 |-----------|-------|-------------|
@@ -113,6 +121,7 @@ The test suite includes **57 tests** across four categories:
 | `test_parser.py` | 11 | HTML parsing unit tests |
 | `test_grader.py` | 13 | Grading logic unit tests |
 | `test_ai_evaluation.py` | 17 | AI-specific evaluation metrics |
+| `test_hardening.py` | 23 | Validation/retry, prompt-injection fencing, evidence grounding, error mapping, overall-grade rollup |
 
 ### AI Evaluation Tests
 

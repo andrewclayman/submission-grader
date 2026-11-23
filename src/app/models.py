@@ -67,6 +67,14 @@ class CriterionAssessment(BaseModel):
         None,
         description="Suggestions for improvement if applicable"
     )
+    evidence_grounded: Optional[bool] = Field(
+        None,
+        description=(
+            "True if every quoted passage in the evidence appears verbatim in the "
+            "submission, False if any quote could not be found (possible "
+            "hallucination), None if the evidence contains no quotes to check"
+        ),
+    )
 
 
 class StandardAssessment(BaseModel):
@@ -103,3 +111,23 @@ class GradeResponse(BaseModel):
     )
     strengths: list[str]
     areas_for_improvement: list[str]
+
+
+# --- Schema for the raw LLM output (validated before we trust it) ---
+
+class LLMCriterionGrade(BaseModel):
+    """One criterion grade as returned by the LLM."""
+    criterion_id: str
+    assigned_grade: GradeLevel
+    evidence: str = ""
+    feedback: str
+    suggestions: Optional[str] = None
+
+
+class LLMGrading(BaseModel):
+    """The full JSON object we ask the LLM to return."""
+    submission_summary: str
+    criteria_grades: list[LLMCriterionGrade]
+    overall_feedback: str
+    strengths: list[str] = Field(default_factory=list)
+    areas_for_improvement: list[str] = Field(default_factory=list)
