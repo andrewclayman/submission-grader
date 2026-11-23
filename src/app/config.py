@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
+    llm_timeout_seconds: float = 60.0
+    llm_max_attempts: int = 3  # re-asks when the output fails validation
+
     # Rate limiting
     max_submission_length: int = 50000  # characters
 
